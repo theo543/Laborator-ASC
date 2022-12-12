@@ -5,8 +5,23 @@
 	.set maxsize, 100
 	nodelens: .space maxsize
 	mat: .space maxsize * maxsize
+	tmp1: .space maxsize * maxsize
+	tmp2: .space maxsize * maxsize
+	path_len: .long 0
+	path_bgn: .long 0
+	path_end: .long 0
+	TMP: .long 0
 .text
 .globl main
+
+# void matrix_mult(int *m1, int *m2, int *mres, int n)
+matrix_mult:
+	push %ebp
+	mov %esp, %ebp
+	# TODO
+ 	mov %ebp, %esp
+	pop %ebp
+	ret
 
 main:
 	push %ebp
@@ -18,7 +33,11 @@ main:
 	call scanf
 
 	cmpl $1, req
-	jne exit_error
+	je req_is_ok
+	cmpl $2, req
+	je req_is_ok
+	jmp exit_error
+	req_is_ok:
 
 	movl $size, 4(%esp)
 	call scanf
@@ -39,7 +58,7 @@ main:
 
 	xor %ebx, %ebx
 	xor %edi, %edi
-	lea (%ebp), %eax
+	lea -4(%ebp), %eax
 	mov %eax, 4(%esp)
 	read_edges_outer: # do while ebx < size
 		mov nodelens(,%ebx,4), %esi
@@ -48,7 +67,7 @@ main:
 			jbe read_edges_inner_exit
 
 			call scanf
-			mov (%ebp), %eax # eax = node
+			mov -4(%ebp), %eax # eax = node
 			add %edi, %eax # eax = node + x * size
 			movl $1, mat(,%eax,4)
 
@@ -62,6 +81,8 @@ main:
 		ja read_edges_outer
 
 	# edi == size * size
+	cmpl $2, req
+	je calc_paths
 
 	movb $' ', number+2
 
@@ -89,6 +110,53 @@ main:
 
 	add $12, %esp
 	pop %ebp
+	jmp exit_normal
+
+	calc_paths:
+	movl $path_len, 4(%esp)
+	call scanf
+	movl $path_bgn, 4(%esp)
+	call scanf
+	movl $path_end, 4(%esp)
+	call scanf
+	mov %ebp, %esp # we're done with scanf
+	mov %edi, %eax # eax = size * size
+	mov $tmp1, %esi # this is the last step
+	mov $tmp2, %edi # this will be the next step
+	xor %ecx, %ecx
+	identity_matrix:
+		movl $1, (%esi,%ecx,4)
+		# ecx == i * size + i
+		add size, %ecx
+		inc %ecx
+		cmp %ecx, %eax
+		jg identity_matrix
+	# preparing argument stack (m1, m2, mres, n)
+	push size
+	push $0
+	push $mat
+	push $0
+	xor %ebx, %ebx
+	raise_to_pow:
+		mov %esi, (%esp)
+		mov %edi, 8(%esp)
+		call matrix_mult
+		xchg %esi, %edi
+		inc %ebx
+		cmp %ebx, path_len
+		jg raise_to_pow
+	add $16, %esp
+	mov path_bgn, %eax
+	mull size
+	add path_end, %eax
+	push (%esi, %eax, 4)
+	push $number
+	call printf
+	pushl $'\n'
+	call putchar
+	add $12, %esp
+	jmp exit_normal
+
 exit_normal:
 	pushl $0
 	call exit
