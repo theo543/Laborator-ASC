@@ -10,7 +10,7 @@ l2s: .asciz "Check 2: prime\n"
 .globl main
 main:
 	push $x
-	push $scanstr 
+	push $scanstr
 	call scanf
 	addl $8, %esp
 
@@ -26,7 +26,7 @@ main:
 	cmp %eax, %ebx
 	cmovne %eax, %ecx
 	mov %ecx, x_sqrt
-	
+
 
 	# check 1
 
@@ -53,13 +53,13 @@ main:
 	loop1end:
 	call printf
 	addl $4, %esp
-	
+
 	# check 2
-	
+
 	mov x_sqrt, %ecx
 	mov x, %ebx
 	mov $0, %esi
-	
+
 	loop2:
 	mov %ebx, %eax
 	mov $0, %edx
