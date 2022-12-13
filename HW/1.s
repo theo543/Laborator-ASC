@@ -18,7 +18,28 @@
 matrix_mult:
 	push %ebp
 	mov %esp, %ebp
-	# TODO
+	sub $8, %esp
+	push %esi
+	push %edi
+	mov 4(%ebp), %edx
+
+	movl $0, -4(%ebp)
+	loop_m1: # loop over x / -4(%ebp)
+		movl $0, -8(%ebp)
+		loop_m2: # loop over y / -8(%ebp)
+			xor %ecx, %ecx
+			loop_mres: # lp over z / %ecx
+				incl %ecx
+				# TODO: code goes here
+				cmp %ecx, %edx
+				jg loop_mres
+			incl -8(%ebp)
+			cmp -8(%ebp), %edx
+			jg loop_m2
+		incl -4(%ebp)
+		cmp -4(%ebp), %edx
+		jg loop_m1
+
  	mov %ebp, %esp
 	pop %ebp
 	ret
@@ -44,6 +65,9 @@ main:
 
 	cmpl $maxsize, size
 	ja exit_error
+
+	cmpl $0, size
+	je exit_error
 
 	mov $nodelens, %esi
 	mov size, %edi
