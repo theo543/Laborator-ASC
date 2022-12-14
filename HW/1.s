@@ -14,23 +14,42 @@
 .text
 .globl main
 
-# void matrix_mult(int *m1, int *m2, int *mres, int n)
+# void matrix_mult(int *m1, int *m2, int *mres, int size)
 matrix_mult:
 	push %ebp
 	mov %esp, %ebp
 	sub $8, %esp
+	push %ebx
 	push %esi
 	push %edi
-	mov 4(%ebp), %edx
+	mov 20(%ebp), %edx # edx = size, RESTORE AFTER MULTIPLYING
 
 	movl $0, -4(%ebp)
 	loop_m1: # loop over x / -4(%ebp)
 		movl $0, -8(%ebp)
 		loop_m2: # loop over y / -8(%ebp)
 			xor %ecx, %ecx
+			movl -4(%ebp), %eax
+			mul %edx
+			addl -8(%ebp), %eax
+			movl 16(%ebp), %edi
+			lea (%edi,%eax,4), %edi # edi = mres[x * size + y]
+			movl $0, (%edi) # mres[x * size + y] = 0
+			movl 8(%ebp), %ebx
+			subl -8(%ebp), %eax
+			lea (%ebx,%eax,4), %ebx # ebx = m1[x * n + 0]
+			movl 12(%ebp), %esi
+			movl -8(%ebp), %eax
+			lea (%esi,%eax,4), %esi # esi = m2[0 * n + y]
+			movl 20(%ebp), %edx # restore edx to size
+
 			loop_mres: # lp over z / %ecx
-				incl %ecx
-				# TODO: code goes here
+				# mres[x * size + y] += m1[x * n + z] * m2[z * n + y]
+				movl (%ebx), %eax
+				mull (%esi)
+				addl %eax, (%edi)
+				mov 20(%ebp), %edx
+				inc %ecx
 				cmp %ecx, %edx
 				jg loop_mres
 			incl -8(%ebp)
@@ -40,7 +59,10 @@ matrix_mult:
 		cmp -4(%ebp), %edx
 		jg loop_m1
 
- 	mov %ebp, %esp
+ 	pop %edi
+	pop %esi
+	pop %ebx
+	add $8, %esp
 	pop %ebp
 	ret
 
@@ -143,7 +165,7 @@ main:
 	call scanf
 	movl $path_end, 4(%esp)
 	call scanf
-	mov %ebp, %esp # we're done with scanf
+	mov %ebp, %esp # done with scanf
 	mov %edi, %eax # eax = size * size
 	mov $tmp1, %esi # this is the last step
 	mov $tmp2, %edi # this will be the next step
