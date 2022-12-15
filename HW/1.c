@@ -45,9 +45,9 @@ int main(){
 			matrix_mult(prev, mat, next, size);
 			int *tmp = prev;
 			prev = next;
-			next = prev;
+			next = tmp;
 		}
-		printf("%d\n", next[src * size + dst]);
+		printf("%d\n", prev[src * size + dst]);
 	}
 	return 0;
 }
