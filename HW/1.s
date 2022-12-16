@@ -50,6 +50,8 @@ matrix_mult:
 				addl %eax, (%edi)
 				mov 20(%ebp), %edx
 				inc %ecx
+				add $4, %ebx
+				lea (%esi, %edx, 4), %esi
 				cmp %ecx, %edx
 				jg loop_mres
 			incl -8(%ebp)
