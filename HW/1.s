@@ -10,7 +10,6 @@
 	path_len: .long 0
 	path_bgn: .long 0
 	path_end: .long 0
-	TMP: .long 0
 .text
 .globl main
 
