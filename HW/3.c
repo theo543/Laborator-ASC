@@ -1,5 +1,5 @@
 #include <stdio.h>
-int mat[100 * 100], tmp1[100 * 100], tmp2[100 * 100];
+#include <sys/mman.h>
 int size;
 int req;
 int nodelens[100];
@@ -15,9 +15,16 @@ void matrix_mult(int *m1, int *m2, int *mres, int n){
 	}
 }
 int main(){
+	int *mem, *mat, *tmp1, *tmp2;
 	scanf("%d", &req);
-	if(req != 1 && req != 2) return 1;
+	if(req != 1 && req != 3) return 1;
 	scanf("%d", &size);
+	if(size > 100) return 1;
+	if(size < 0) return 1;
+	mem = mmap(NULL, sizeof(int) * 3 * size * size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+	mat = mem;
+	tmp1 = mem + sizeof(int) * size * size;
+	tmp2 = mem + sizeof(int) * 2 * size * size;
 	for(int x = 0;x<size;x++)
 		scanf("%d", &nodelens[x]);
 	for(int x = 0;x<size;x++){

@@ -4,9 +4,6 @@
 	req: .long 0
 	.set maxsize, 100
 	nodelens: .space maxsize
-	mat: .space maxsize * maxsize
-	tmp1: .space maxsize * maxsize
-	tmp2: .space maxsize * maxsize
 	path_len: .long 0
 	path_bgn: .long 0
 	path_end: .long 0
@@ -70,15 +67,18 @@ matrix_mult:
 main:
 	push %ebp
 	mov %esp, %ebp
-	sub $4, %esp
+	sub $12, %esp
+	# -4(%ebp) = tmp variable for scanf
+	# -8(%ebp) = mmap pointer
+	# -12(%ebp) = mmap size
 
-	pushl $req
-	pushl $number
+	pushl $req # will be reused a lot, with different addresses here
+	pushl $number # format string will be reused until we're done with scanf, then we'll clear these from the stack
 	call scanf
 
 	cmpl $1, req
 	je req_is_ok
-	cmpl $2, req
+	cmpl $3, req
 	je req_is_ok
 	jmp exit_error
 	req_is_ok:
@@ -91,6 +91,26 @@ main:
 
 	cmpl $0, size
 	je exit_error
+
+	mov size, %eax
+	mull size
+	shl $2, %eax
+	lea (%eax,%eax,2), %eax
+	mov %eax, -12(%ebp) # mmap size = size * size * 3 * sizeof(int)
+
+	push %ebp
+	mov $192, %eax # mmap2 syscall number
+	mov $0, %ebx # addr = NULL - let kernel choose, we don't care
+	mov -12(%ebp), %ecx # length = size * size * 3 * sizeof(int) - we need 3 matrices
+	mov $3, %edx # prot = PROT_READ | PROT_WRITE - we need the matrices to be readable and writable
+	mov $0x22, %esi # flags = MAP_PRIVATE | MAP_ANONYMOUS - memory is not shared with another process, and we aren't using a file
+	mov $-1, %edi # fd = -1 - no file, memory is anonymous
+	mov $0, %ebp # offset = 0 - offset must be 0 when using anonymous memory (since there's no file to offset from)
+	int $0x80 # call mmap2
+	pop %ebp
+	cmp $-1, %eax
+	je exit_error
+	mov %eax, -8(%ebp) # this will be freed by kernel when we exit
 
 	mov $nodelens, %esi
 	mov size, %edi
@@ -116,7 +136,8 @@ main:
 			call scanf
 			mov -4(%ebp), %eax # eax = node
 			add %edi, %eax # eax = node + x * size
-			movl $1, mat(,%eax,4)
+			mov -8(%ebp), %edx # mat is at 0/3 -> 1/3 of the mmap
+			movl $1, (%edx,%eax,4)
 
 			sub $1, %esi
 			jmp read_edges_inner
@@ -128,10 +149,10 @@ main:
 		ja read_edges_outer
 
 	# edi == size * size
-	cmpl $2, req
+	cmpl $3, req
 	je calc_paths
 
-	movb $' ', number+2
+	movb $' ', number+2 # the string is now "%d "
 
 	xor %esi, %esi
 
@@ -139,7 +160,8 @@ main:
 		xor %ebx, %ebx
 		print_matrix_line: # do while ebx < size
 			lea (%ebx,%esi,1), %eax
-			movl mat(,%eax,4), %eax
+			mov -8(%ebp), %edx # mat is at 0/3 -> 1/3 of the mmap
+			movl (%edx,%eax,4), %eax
 			mov %eax, 4(%esp)
 			call printf
 
@@ -155,8 +177,6 @@ main:
 		cmp %esi, %edi
 		ja print_matrix
 
-	add $12, %esp
-	pop %ebp
 	jmp exit_normal
 
 	calc_paths:
@@ -166,10 +186,12 @@ main:
 	call scanf
 	movl $path_end, 4(%esp)
 	call scanf
-	mov %ebp, %esp # done with scanf
+	lea -12(%ebp), %esp # done with scanf, but still need the locals
 	mov %edi, %eax # eax = size * size
-	mov $tmp1, %esi # this is the last step
-	mov $tmp2, %edi # this will be the next step
+	mov -8(%ebp), %esi # this is the last step
+	add -12(%ebp), %esi # tmp1 is at 1/3 -> 2/3 of the mmap
+	mov %esi, %edi # this will be the next step
+	add -12(%ebp), %edi # tmp2 is at 2/3 -> 3/3 of the mmap
 	xor %ecx, %ecx
 	identity_matrix:
 		movl $1, (%esi,%ecx,4)
@@ -181,7 +203,7 @@ main:
 	# preparing argument stack (m1, m2, mres, n)
 	push size
 	push $0
-	push $mat
+	push -8(%ebp)
 	push $0
 	xor %ebx, %ebx
 	raise_to_pow:
@@ -201,10 +223,11 @@ main:
 	call printf
 	pushl $'\n'
 	call putchar
-	add $12, %esp
 	jmp exit_normal
 
 exit_normal:
+	add $12, %esp
+	pop %ebp
 	pushl $0
 	call exit
 

@@ -18,6 +18,7 @@ int main(){
 	scanf("%d", &req);
 	if(req != 1 && req != 2) return 1;
 	scanf("%d", &size);
+	if(size > 100) return 1;
 	for(int x = 0;x<size;x++)
 		scanf("%d", &nodelens[x]);
 	for(int x = 0;x<size;x++){
