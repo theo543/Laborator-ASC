@@ -3,10 +3,10 @@
 	size: .long 0
 	req: .long 0
 	.set maxsize, 100
-	nodelens: .space maxsize
-	mat: .space maxsize * maxsize
-	tmp1: .space maxsize * maxsize
-	tmp2: .space maxsize * maxsize
+	nodelens: .space 4 * maxsize
+	mat: .space 4 * maxsize * maxsize
+	tmp1: .space 4 * maxsize * maxsize
+	tmp2: .space 4 * maxsize * maxsize
 	path_len: .long 0
 	path_bgn: .long 0
 	path_end: .long 0

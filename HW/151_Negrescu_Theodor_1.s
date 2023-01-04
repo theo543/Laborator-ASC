@@ -3,7 +3,7 @@
 	size: .long 0
 	req: .long 0
 	.set maxsize, 100
-	nodelens: .space maxsize
+	nodelens: .space 4 * maxsize
 	path_len: .long 0
 	path_bgn: .long 0
 	path_end: .long 0
@@ -110,7 +110,7 @@ main:
 	pop %ebp
 	cmp $-1, %eax
 	je exit_error
-	mov %eax, -8(%ebp) # this will be freed by kernel when we exit
+	mov %eax, -8(%ebp)
 
 	mov $nodelens, %esi
 	mov size, %edi
@@ -188,10 +188,12 @@ main:
 	call scanf
 	lea -12(%ebp), %esp # done with scanf, but still need the locals
 	mov %edi, %eax # eax = size * size
+	shl $2, %eax
 	mov -8(%ebp), %esi # this is the last step
-	add -12(%ebp), %esi # tmp1 is at 1/3 -> 2/3 of the mmap
+	add %eax, %esi # tmp1 is at 1/3 -> 2/3 of the mmap
 	mov %esi, %edi # this will be the next step
-	add -12(%ebp), %edi # tmp2 is at 2/3 -> 3/3 of the mmap
+	add %eax, %edi # tmp2 is at 2/3 -> 3/3 of the mmap
+	shr $2, %eax
 	xor %ecx, %ecx
 	identity_matrix:
 		movl $1, (%esi,%ecx,4)
@@ -226,7 +228,13 @@ main:
 	jmp exit_normal
 
 exit_normal:
-	add $12, %esp
+	mov $91, %eax # munmap syscall number
+	mov -8(%ebp), %ebx # pointer to allocated memory to unmap
+	mov -12(%ebp), %ecx # size of the 3 matrices to unmap
+	int $0x80 # call munmap
+	cmp $0, %eax
+	jne exit_error # if munmap failed, exit with error
+	mov %ebp, %esp
 	pop %ebp
 	pushl $0
 	call exit
