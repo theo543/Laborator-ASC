@@ -1,5 +1,7 @@
 .data
-	number: .ascii "%d\0\0"
+	number: .asciz "%d"
+	number_space: .asciz "%d "
+	number_3: .asciz "%d%d%d"
 	size: .long 0
 	req: .long 0
 	.set maxsize, 100
@@ -75,6 +77,7 @@ main:
 	pushl $req
 	pushl $number
 	call scanf
+	add $8, %esp
 
 	cmpl $1, req
 	je req_is_ok
@@ -83,8 +86,10 @@ main:
 	jmp exit_error
 	req_is_ok:
 
-	movl $size, 4(%esp)
+	pushl $size
+	pushl $number
 	call scanf
+	add $8, %esp
 
 	cmpl $maxsize, size
 	ja exit_error
@@ -96,8 +101,10 @@ main:
 	mov size, %edi
 	lea (%esi,%edi,4), %edi
 	read_nodelens:
-		movl %esi, 4(%esp)
+		pushl %esi
+		pushl $number
 		call scanf
+		addl $8, %esp
 
 		add $4, %esi
 		cmp %esi, %edi
@@ -106,14 +113,15 @@ main:
 	xor %ebx, %ebx
 	xor %edi, %edi
 	lea -4(%ebp), %eax
-	mov %eax, 4(%esp)
+	push %eax # will scanf into this local a bunch of times
+	push $number
 	read_edges_outer: # do while ebx < size
 		mov nodelens(,%ebx,4), %esi
 		read_edges_inner: # while esi
 			cmp $0, %esi
 			jbe read_edges_inner_exit
 
-			call scanf
+			call scanf # read into the local
 			mov -4(%ebp), %eax # eax = node
 			add %edi, %eax # eax = node + x * size
 			movl $1, mat(,%eax,4)
@@ -126,22 +134,21 @@ main:
 		add $1, %ebx
 		cmp %ebx, size
 		ja read_edges_outer
+	addl $8, %esp
 
 	# edi == size * size
 	cmpl $2, req
 	je calc_paths
-
-	movb $' ', number+2
-
 	xor %esi, %esi
-
 	print_matrix:
 		xor %ebx, %ebx
 		print_matrix_line: # do while ebx < size
 			lea (%ebx,%esi,1), %eax
 			movl mat(,%eax,4), %eax
-			mov %eax, 4(%esp)
+			push %eax
+			push $number_space
 			call printf
+			add $8, %esp
 
 			add $1, %ebx
 			cmp %ebx, size
@@ -155,18 +162,15 @@ main:
 		cmp %esi, %edi
 		ja print_matrix
 
-	add $12, %esp
-	pop %ebp
 	jmp exit_normal
 
 	calc_paths:
-	movl $path_len, 4(%esp)
+	pushl $path_end
+	pushl $path_bgn
+	pushl $path_len
+	pushl $number_3
 	call scanf
-	movl $path_bgn, 4(%esp)
-	call scanf
-	movl $path_end, 4(%esp)
-	call scanf
-	mov %ebp, %esp # done with scanf
+	add $16, %esp
 	mov %edi, %eax # eax = size * size
 	mov $tmp1, %esi # this is the last step
 	mov $tmp2, %edi # this will be the next step
@@ -178,35 +182,35 @@ main:
 		inc %ecx
 		cmp %ecx, %eax
 		jg identity_matrix
-	# preparing argument stack (m1, m2, mres, n)
-	push size
-	push $0
-	push $mat
-	push $0
 	xor %ebx, %ebx
 	raise_to_pow:
-		mov %esi, (%esp)
-		mov %edi, 8(%esp)
+		push size
+		push %edi
+		push $mat
+		push %esi
 		call matrix_mult
+		addl $16, %esp
 		xchg %esi, %edi
 		inc %ebx
 		cmp %ebx, path_len
 		jg raise_to_pow
-	add $16, %esp
 	mov path_bgn, %eax
 	mull size
 	add path_end, %eax
 	push (%esi, %eax, 4)
 	push $number
 	call printf
+	add $8, %esp
 	pushl $'\n'
 	call putchar
-	add $12, %esp
+	add $4, %esp
 	jmp exit_normal
 
 exit_normal:
-	pushl $0
-	call exit
+	xor %eax, %eax # return 0
+	mov %ebp, %esp # clear everything from the stack
+	pop %ebp
+	ret
 
 exit_error:
 	pushl $1
