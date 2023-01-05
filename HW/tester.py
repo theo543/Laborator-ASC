@@ -27,34 +27,24 @@ def main():
         matrix1 = [[int(x) for x in line.split()] for line in proc1.stdout.splitlines()]
         proc2 = subprocess.run(["./151_Negrescu_Theodor_1"], input="1 " + input, capture_output=True, text=True)
         matrix2 = [[int(x) for x in line.split()] for line in proc2.stdout.splitlines()]
-        if not (matrix1 == matrix):
-            print("1\n" + input)
-            print()
-            print(*matrix, sep='\n')
-            print()
-            print(*matrix1, sep='\n')
+        if not (matrix1 == matrix == matrix2):
+            print(f"Input (without req):\n{input}\nReturn code 1: {proc1.returncode}, return code 2: {proc2.returncode}")
             break
         plen = random.randint(1, 5)
         src = random.randint(0, size - 1)
         dst = random.randint(0, size - 1)
         input += f"\n{plen}\n{src}\n{dst}\n"
-        proc3 = subprocess.run(["./151_Negrescu_Theodor_0"], input="2 " + input, capture_output=True, text=True)
-        proc4 = subprocess.run(["./151_Negrescu_Theodor_1"], input="3 " + input, capture_output=True, text=True)
+        proc1 = subprocess.run(["./151_Negrescu_Theodor_0"], input="2 " + input, capture_output=True, text=True)
+        proc2 = subprocess.run(["./151_Negrescu_Theodor_1"], input="3 " + input, capture_output=True, text=True)
         matpow = numpy.array(matrix)
         matpow = matrix_power(matpow, plen)
-        if proc3.returncode or proc4.returncode or not (matpow[src][dst] == int(proc3.stdout) == int(proc4.stdout)):
+        if proc1.returncode or proc2.returncode or not (matpow[src][dst] == int(proc1.stdout) == int(proc2.stdout)):
             # 2147483647 = 2^31 - 1
             if matpow[src][dst] > 2147483647:
                 print("int overflow")
                 continue
-            print(matpow[src][dst])
-            print()
-            print(proc3.stdout)
-            print(proc4.stdout)
-            print(input)
-            print(*matrix, sep='\n')
-            print(proc3.returncode)
-            print(proc4.returncode)
+            print(f"Tester's answer: {matpow[src][dst]}, program 1 answer: {proc1.stdout}, program 2 answer: {proc2.stdout}")
+            print(f"Input (without req):\n{input}\nReturn code 1: {proc1.returncode}, return code 2: {proc2.returncode}")
             break
     pass
 
