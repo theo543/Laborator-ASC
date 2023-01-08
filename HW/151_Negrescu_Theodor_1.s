@@ -2,6 +2,7 @@
 	number: .asciz "%d"
 	number_space: .asciz "%d "
 	number_3: .asciz "%d%d%d"
+	newline: .asciz "\n"
 	size: .long 0
 	req: .long 0
 	.set maxsize, 100
@@ -176,8 +177,8 @@ main:
 			cmp %ebx, size
 			ja print_matrix_line
 
-		pushl $'\n'
-		call putchar
+		pushl $newline
+		call printf
 		add $4, %esp
 
 		add size, %esi
@@ -227,9 +228,9 @@ main:
 	push $number
 	call printf
 	addl $8, %esp
-	pushl $'\n'
-	call putchar
-	add $4, %esp
+	push $newline
+	call printf
+	addl $4, %esp
 	jmp exit_normal
 
 exit_normal:
@@ -239,10 +240,13 @@ exit_normal:
 	int $0x80 # call munmap
 	cmp $0, %eax
 	jne exit_error # if munmap failed, exit with error
-	xor %eax, %eax # return 0
 	mov %ebp, %esp # clear everything from the stack
 	pop %ebp
-	ret
+	push $newline
+	call printf # make sure output is flushed
+	add $4, %esp
+	push $0
+	call exit # exit should flush stdout
 
 exit_error:
 	pushl $1
