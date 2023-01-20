@@ -63,7 +63,7 @@ matrix_mult:
 		cmp -4(%ebp), %edx
 		jg loop_m1
 
- 	pop %edi
+	pop %edi
 	pop %esi
 	pop %ebx
 	add $8, %esp
